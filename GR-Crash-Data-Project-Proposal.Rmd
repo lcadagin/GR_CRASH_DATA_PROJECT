@@ -24,19 +24,6 @@ glimpse(crash_data)
 ```
 
 ```{r}
-june_6_2008 <- crash_data %>% 
-  filter(CRASHDATE == "6/16/2008", INTERNAME == "PLYMOUTH")
-june_6_2008
-
-under_16 <- crash_data %>%
-  select(DRIVER1AGE) %>% 
-  filter(DRIVER1AGE < 16)
-
-under_16
-```
-
-
-```{r}
 bikes_2014 <- crash_data %>% 
   filter(BIKE == "Yes", YEAR == 2014)
 
@@ -77,7 +64,7 @@ ggplot()+
 
 ### Data Entered Incorrectly:
 
-Let's take a look at a Hit and Run that occurred on 6/16/2008 on Alger Street:
+Let's take a look at a Hit and Run that occurred on 6/16/2008 on Alger Street (Primary Road Name):
 
 ```{r}
 june_6_2008 <- crash_data %>% 
@@ -87,8 +74,35 @@ june_6_2008 <- crash_data %>%
 june_6_2008
 ```
 
-You can see that the age of the first driver (in this instance, the victim of the hit and run) is entered as 16.
+You can see that the age of the vehicle one driver (in this instance, the victim of the hit and run) is entered as 16.
 
 We can use the Michigan Traffic Crash Facts (MTCF) site to view a redacted police report of this same crash:
 
-![Alt text](here::here("images", "6162008_crash_report_snip.PNG"))
+![Alt text](/home/cadaginl/STA 518/Project/GR_CRASH_DATA_PROJECT/images/6162008_crash_report_driver.PNG)
+
+Here you can see that the driver was born 8/8/81, which would make them 26 at the time.  We know this is the driver because they are located in the "UNIT/DRIVER" section on the left hand side.  Also, position 1 is the driver position in a vehicle (as seen in the "UD-10 Traffic Crash Report Instruction Manual - 2018"):
+
+![Alt text](/home/cadaginl/STA 518/Project/GR_CRASH_DATA_PROJECT/images/position_image.PNG)
+
+However, there was a passenger in vehicle one who was born 7/25/91, which would make them 16 at the time.  We know this is the passenger because they are located in the "PASSENGERS" section on the left hand side.  Also, position 4 is not the driver position:
+
+![Alt text](/home/cadaginl/STA 518/Project/GR_CRASH_DATA_PROJECT/images/6162008_crash_report_passenger.PNG)
+
+This suggests that there some of the data entered into the csv file I downloaded from the grdata website was not correct.
+
+It is interesting to note that the MTCF site also identities the driver of vehicle one as being 16 years old.  This suggests that there is an error in the State of Michigan driver database.  This was most likely an entry error when the hand-written report was digitized:
+
+![Alt text](/home/cadaginl/STA 518/Project/GR_CRASH_DATA_PROJECT/images/mtcf_crash_age.PNG)
+
+We can see that there are other potential errors present in the data:
+
+```{r}
+under_5 <- crash_data %>%
+  select(DRIVER1AGE) %>% 
+  filter(DRIVER1AGE < 5)
+
+head(under_5)
+```
+
+
+A challenge of exploring this data will be to see if additional entry errors like this occurred and making adjustments to correct or mitigate these errors.
