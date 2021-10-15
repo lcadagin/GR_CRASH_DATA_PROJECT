@@ -3,8 +3,8 @@ title: "GR Crash Data Proposal STA 518"
 author: "Luke Cadagin"
 date: "10/15/2021"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 Load Libraries:
