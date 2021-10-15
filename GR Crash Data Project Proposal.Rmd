@@ -1,0 +1,90 @@
+---
+title: "Project Exploration"
+author: "Luke Cadagin"
+date: "10/8/2021"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(sf)
+library(osmdata)
+library(here)
+```
+
+
+```{r}
+crash_data <- read_csv(here::here("STA 518", "Project", "data", "CGR_Crash_Data.csv"))
+head(crash_data)
+```
+
+```{r}
+glimpse(crash_data)
+```
+
+```{r}
+june_6_2008 <- crash_data %>% 
+  filter(CRASHDATE == "2008-06-16", INTERNAME == "PLYMOUTH")
+june_6_2008
+
+under_16 <- crash_data %>%
+  select(DRIVER1AGE) %>% 
+  filter(DRIVER1AGE < 16)
+
+under_16
+```
+
+
+```{r}
+bikes_2014 <- crash_data %>% 
+  filter(BIKE == "Yes" & year(CRASHDATE) == 2014)
+
+hit_and_run_2017 <- crash_data %>% 
+  filter(HITANDRUN == "Yes", year(CRASHDATE) == 2017, HOUR >= 22)
+```
+
+```{r}
+location_gr <- getbb("Grand Rapids City") %>% 
+  opq()
+
+roads_gr <- location_gr %>%
+  add_osm_feature(key = "highway", value = c("motorway", "trunk", "primary", "secondary", "tertiary")) %>%
+  osmdata_sf()
+
+water_gr <- location_gr %>% 
+  add_osm_feature(key = "waterway", value = c("river")) %>% 
+  osmdata_sf()
+
+boundary_gr <- location_gr %>% 
+  add_osm_feature(key = "boundary", value = "administrative") %>%
+  #add_osm_feature(key = "admin_level", value = "8") %>% 
+  #add_osm_feature(key = "border_type", value = "city") %>% 
+  #add_osm_feature(key = "place", value = "city") %>% 
+  add_osm_feature(key = "name", value = "Grand Rapids") %>% 
+  osmdata_sf()
+boundary_gr
+
+ggplot()+
+         geom_sf(data = roads_gr$osm_lines, size = .5, alpha = .5, color = 'black') +
+         geom_sf(data = water_gr$osm_lines, size = 1, alpha = .3, color = 'steelblue') +
+         geom_point(data = hit_and_run_2017, mapping = aes(x = X, y = Y), color = "brown") +
+         geom_sf(data = boundary_gr$osm_lines, size = 1, alpha = .5, color = "orange") +
+         coord_sf(xlim = c(-85.57, -85.75), ylim = c(42.88, 43.03))
+```
+
+
+```{r}
+#michigan <- map_data("state")
+
+#grand_rapids <- michigan %>%
+  #filter(subregion %in% c("Michigan")) #%>% 
+  #select(long, lat, group, id = subregion)
+
+#grand_rapids
+
+#ggplot(grand_rapids, aes(x = long, y = lat, group = group)) + 
+#  geom_polygon(fill = "lightblue", color = "black") + 
+ # theme_void()
+```
+
