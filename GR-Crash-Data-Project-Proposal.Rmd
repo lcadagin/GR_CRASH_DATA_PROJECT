@@ -2,10 +2,14 @@
 title: "GR Crash Data Proposal STA 518"
 author: "Luke Cadagin"
 date: "10/15/2021"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
-```{r}
+Load Libraries:
+
+```{r load libraries, message = FALSE}
 library(tidyverse)
 library(lubridate)
 library(sf)
@@ -13,26 +17,56 @@ library(osmdata)
 library(here)
 ```
 
+Read-In Crash Data:
 
-```{r}
+```{r read in crash data csv, message = FALSE}
 crash_data <- read_csv(here::here("data", "CGR_Crash_Data2.csv"))
-head(crash_data)
 ```
 
-```{r}
-glimpse(crash_data)
-```
 
-```{r}
-bikes_2014 <- crash_data %>% 
-  filter(BIKE == "Yes", YEAR == 2014)
+# Grand Rapids Crash Data Project
 
+## Proposal
+
+### Overview:
+
+![Alt text](/home/cadaginl/STA 518/Project/GR_CRASH_DATA_PROJECT/images/luke_cadagin_accident.jpg)
+
+On September 18th, 2021 I was rear-ended in a hit-and-run accident.  This incident got me interested in exploring data related to traffic accidents in the state of Michigan.
+
+Dr. Kapitula pointed me to a traffic accident dataset on the grdata website (https://grdata-grandrapids.opendata.arcgis.com/) that includes de-identified crash data for all reports in Grand Rapids from 2007 to 2017.
+
+Unfortunately the .csv file downloaded from the grdata website was slightly too large to be stored in github (around 103MB).  I removed the CITY, COUNTY, MDOTREG, RDUSRINVID, NONTRAFFIC, and FRAMEWORK fields from the .csv, before uploading it in R/github to cut down on size.  These columns contained the same value for every single row and did not assist with analysis.
+
+### End Product:
+
+The goal of my project is to create a report or website for the City of Grand Rapids that analyzes traffic risks and provides suggestions on how improvements could be made.
+
+Traffic Risk and Questions could include:
+
+Do Hit and Run accidents ocurr in higher or lower income zip codes?  Would public outreach programs in those zip codes explaining Michigan no-fault laws reduce the frequecy of hit and runs?
+
+Do a majority of accidents involving trains ocurr at crossings that use gates?  Would including more gates for pedestrians and vehicles increase public safety?  This is an intersting topic as there are trains that go straight through the Pew Campus everyday.
+
+Do posted speed limits on a street play a large role in driver injuries or deaths?  Would decreasing speed limits in heavily populated areas decrease crash injuries and deaths?
+
+Are acidents with deer a major concern in rural areas?  Do fences on rural roads effectively reduce accidents involving deer or other animals?
+
+I will need to look for additional data sets (such as average income levels in grandrapids zip codes) to assist me with my analysis.
+
+### Graphing:
+
+I can use the sf and osmdata libraries to graph the location of accidents on a map of Grand Rapids.  This will allow me to identify clusters and trends of accidents spread out around the city.
+
+For example, below is a visualizations of all hit and run accidents that ocurred in 2017 between the hours of 10:00 PM and 12:00 AM:
+
+```{r warning = FALSE}
 hit_and_run_2017 <- crash_data %>% 
   filter(HITANDRUN == "Yes", YEAR == 2017, HOUR >= 22)
 ```
 
-```{r}
-location_gr <- getbb("Grand Rapids City") %>% 
+```{r warning = FALSE}
+location_gr <- getbb("Grand Rapids") %>% 
   opq()
 
 roads_gr <- location_gr %>%
@@ -50,7 +84,6 @@ boundary_gr <- location_gr %>%
   #add_osm_feature(key = "place", value = "city") %>% 
   add_osm_feature(key = "name", value = "Grand Rapids") %>% 
   osmdata_sf()
-boundary_gr
 
 ggplot()+
          geom_sf(data = roads_gr$osm_lines, size = .5, alpha = .5, color = 'black') +
@@ -90,7 +123,7 @@ However, there was a passenger in vehicle one who was born 7/25/91, which would 
 
 This suggests that there some of the data entered into the csv file I downloaded from the grdata website was not correct.
 
-It is interesting to note that the MTCF site also identities the driver of vehicle one as being 16 years old.  This suggests that there is an error in the State of Michigan driver database.  This was most likely an entry error when the hand-written report was digitized:
+It is interesting to note that the MTCF site also identities the driver of vehicle one as being 16 years old.  This suggests that there is an error in the State of Michigan crash database.  This was most likely an entry error when the hand-written report was digitized:
 
 ![Alt text](/home/cadaginl/STA 518/Project/GR_CRASH_DATA_PROJECT/images/mtcf_crash_age.PNG)
 
@@ -106,3 +139,7 @@ head(under_5)
 
 
 A challenge of exploring this data will be to see if additional entry errors like this occurred and making adjustments to correct or mitigate these errors.
+
+### Generalizing the Data:
+
+It is important to keep in mind that this dataset only spans from 2007 to 2017.  We are not analyzing any data from 2018 to 2021, thus some driving trends or habits may have changed over time.  For example, crash data after March 2020 is most likely atypical of prior time periods due to the COVID-19 lockdowns.  In addition to this, we must be mindful that not all traffic accidents are reported to the police and our dataset most likely does not encompass the true population of crashes between 2007 and 2017.
