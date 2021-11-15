@@ -1,0 +1,137 @@
+---
+title: "GR Crash Data Exploration"
+author: "Luke Cadagin"
+date: "11/1/2021"
+output: html_document
+---
+
+```{r loading packages, message = FALSE}
+library(tidyverse)
+library(lubridate)
+library(sf)
+library(osmdata)
+library(here)
+library(tmap)
+library(tmaptools)
+```
+
+```{r}
+crash_data <- read_csv(here::here("data", "CGR_Crash_Data.csv"))
+head(crash_data)
+```
+
+The below speedlimits appear to be incorrect.  If a speedlimit is N/A or Unknown, it appears it is typically marked with 99.  No Michigan road had a speelimit over 70 unitl 2017.
+
+```{r}
+crash_data %>% 
+  filter(SPEEDLIMIT > 70, SPEEDLIMIT != 99) %>% 
+  select(SPEEDLIMIT, PRNAME, INTERNAME, YEAR)
+```
+
+Note:
+
+REFDIR is a variable indicating the direction from the impact to the intersecting road.
+REFDIST is a variable indicating the distance from the impact to the intersecting road.
+Note that this can be in feet of miles, but the dataset failed to include this field.
+
+UD10NUM is a variable indicating the Crash Report "UD-10" Identification number.  This is useful for matching a specific report to a record.
+
+PRNAME is the primary road name.
+PRNO seems to be a special numerical designation for Grand Rapids roads used by the police
+
+```{r}
+crash_data %>% 
+  filter(YEAR == 2008) %>%
+  distinct(PRNO)
+  #select(PRNO) #%>% 
+  #ggplot() +
+  #geom_histogram(mapping = aes(x = PRNO, color = PRNAME))
+```
+
+```{r}
+crash_data %>% 
+  filter(YEAR == 2008, DRIVER1AGE <150) %>%
+  ggplot() +
+  geom_histogram(mapping = aes(x = DRIVER1AGE))
+```
+
+```{r}
+head(crash_data)
+```
+
+```{r}
+geocode_OSM("949 wealthy Street SE Grand Rapids")
+```
+
+
+```{r}
+test <- rev_geocode_OSM(x = -85.67486	, y = 42.94856)[[1]]["postcode"]
+
+test
+```
+
+```{r}
+crash_data_zip <- crash_data %>% 
+  filter(YEAR == 2017, MONTH == "June", DAYOFMONTH == 1) %>% 
+  select(X,Y) %>% 
+  rowwise() %>% 
+  mutate(zip_code = unlist(rev_geocode_OSM(x = X, y = Y)[[1]]["postcode"]))
+
+head(crash_data_zip)
+```
+
+```{r}
+location_gr <- getbb("Grand Rapids") %>% 
+  opq()
+
+roads_gr <- location_gr %>%
+  add_osm_feature(key = "highway", value = c("motorway", "trunk", "primary", "secondary", "tertiary")) %>%
+  osmdata_sf()
+
+water_gr <- location_gr %>% 
+  add_osm_feature(key = "waterway", value = c("river")) %>% 
+  osmdata_sf()
+
+boundary_gr <- location_gr %>% 
+  add_osm_feature(key = "boundary", value = "administrative") %>%
+  #add_osm_feature(key = "admin_level", value = "8") %>% 
+  #add_osm_feature(key = "border_type", value = "city") %>% 
+  #add_osm_feature(key = "place", value = "city") %>% 
+  add_osm_feature(key = "name", value = "Grand Rapids") %>% 
+  osmdata_sf()
+
+zip_gr <- location_gr %>% 
+  add_osm_feature(key = "boundary", value = "postal_code") %>% 
+  add_osm_feature(key = "postal_code", value = "49506") %>% 
+  osmdata_sf()
+
+ggplot()+
+         geom_sf(data = roads_gr$osm_lines, size = .5, alpha = .5, color = 'black') +
+         geom_sf(data = water_gr$osm_lines, size = 1, alpha = .3, color = 'steelblue') +
+         geom_point(data = crash_data_zip, mapping = aes(x = X, y = Y), color = "brown") +
+         geom_sf(data = boundary_gr$osm_lines, size = 1, alpha = .5, color = "orange") +
+         geom_sf(data = zip_gr$osm_lines, size = .5, color = "red") +
+         coord_sf(xlim = c(-85.57, -85.75), ylim = c(42.88, 43.03))
+```
+
+```{r}
+zip_gr <- location_gr %>% 
+  add_osm_feature(key = "boundary", value = "") %>% 
+  add_osm_feature(key = "boundary", value = "postal_code") %>% 
+  osmdata_sf()
+
+zip_gr
+```
+
+```{r}
+boundary_gr <- location_gr %>% 
+  add_osm_feature(key = "boundary", value = "administrative") %>%
+  #add_osm_feature(key = "admin_level", value = "8") %>% 
+  #add_osm_feature(key = "border_type", value = "city") %>% 
+  #add_osm_feature(key = "place", value = "city") %>% 
+  add_osm_feature(key = "name", value = "Grand Rapids") %>% 
+  osmdata_sf()
+
+boundary_gr
+```
+

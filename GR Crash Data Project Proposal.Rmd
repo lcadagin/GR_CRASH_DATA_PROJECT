@@ -15,7 +15,7 @@ library(here)
 
 
 ```{r}
-crash_data <- read_csv(here::here("data", "CGR_Crash_Data2.csv"))
+crash_data <- read_csv(here::here("data", "CGR_Crash_Data.csv"))
 head(crash_data)
 ```
 
