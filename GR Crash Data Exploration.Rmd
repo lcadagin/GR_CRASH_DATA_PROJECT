@@ -13,12 +13,20 @@ library(osmdata)
 library(here)
 library(tmap)
 library(tmaptools)
+library(ggforce)
 ```
 
 ```{r}
 crash_data <- read_csv(here::here("data", "CGR_Crash_Data.csv"))
 head(crash_data)
 ```
+
+
+
+```{r}
+glimpse(crash_data)
+```
+
 
 The below speedlimits appear to be incorrect.  If a speedlimit is N/A or Unknown, it appears it is typically marked with 99.  No Michigan road had a speelimit over 70 unitl 2017.
 
@@ -71,6 +79,13 @@ test
 ```
 
 ```{r}
+#t <-  map2(crash_data$X, crash_data$Y, rev_geocode_OSM)
+
+#head(t)
+```
+
+
+```{r}
 crash_data_zip <- crash_data %>% 
   filter(YEAR == 2017, MONTH == "June", DAYOFMONTH == 1) %>% 
   select(X,Y) %>% 
@@ -100,19 +115,22 @@ boundary_gr <- location_gr %>%
   add_osm_feature(key = "name", value = "Grand Rapids") %>% 
   osmdata_sf()
 
-zip_gr <- location_gr %>% 
-  add_osm_feature(key = "boundary", value = "postal_code") %>% 
-  add_osm_feature(key = "postal_code", value = "49506") %>% 
-  osmdata_sf()
+#zip_gr <- location_gr %>% 
+ # add_osm_feature(key = "boundary", value = "postal_code") %>% 
+ # add_osm_feature(key = "postal_code", value = "49506") %>% 
+  #osmdata_sf()
 
+```
+
+```{r}
 ggplot()+
          geom_sf(data = roads_gr$osm_lines, size = .5, alpha = .5, color = 'black') +
          geom_sf(data = water_gr$osm_lines, size = 1, alpha = .3, color = 'steelblue') +
-         geom_point(data = crash_data_zip, mapping = aes(x = X, y = Y), color = "brown") +
          geom_sf(data = boundary_gr$osm_lines, size = 1, alpha = .5, color = "orange") +
-         geom_sf(data = zip_gr$osm_lines, size = .5, color = "red") +
+         #geom_sf(data = zip_gr$osm_lines, size = .5, color = "red") +
          coord_sf(xlim = c(-85.57, -85.75), ylim = c(42.88, 43.03))
 ```
+
 
 ```{r}
 zip_gr <- location_gr %>% 
@@ -133,5 +151,77 @@ boundary_gr <- location_gr %>%
   osmdata_sf()
 
 boundary_gr
+```
+
+
+```{r}
+crash_data$HITANDRUN <- if_else(crash_data$HITANDRUN == "Yes", 1, 0)
+
+logistic <- glm(HITANDRUN ~ HOUR, data = crash_data, family = "binomial")
+
+summary(logistic)
+```
+
+```{r}
+rr_crossing_data <- read_csv(here::here("data", "Crossing_Inventory_Data_-_Current.csv"))
+
+head(rr_crossing_data)
+```
+
+```{r}
+rr_crossing_data_gr <- rr_crossing_data %>% 
+  filter(`State Name` == "MICHIGAN", `City Name` == "GRAND RAPIDS")
+
+rr_crossing_data_gr
+```
+
+```{r}
+rr_crash <- crash_data %>% 
+  rowwise() %>% 
+  filter(1 %in% in_radius(X,Y))
+
+rr_crash
+```
+
+
+```{r}
+ggplot()+
+         geom_sf(data = roads_gr$osm_lines, size = .5, alpha = .5, color = 'black') +
+         geom_sf(data = water_gr$osm_lines, size = 1, alpha = .3, color = 'steelblue') +
+         geom_sf(data = boundary_gr$osm_lines, size = 1, alpha = .5, color = "orange") +
+         geom_point(data = rr_crossing_data_gr, mapping = aes(x = Longitude, y = Latitude), color = "red") +
+         geom_point(data = rr_crash, mapping = aes(x = X, y = Y), color = "blue") +
+         geom_circle(data = rr_crossing_data_gr, mapping = aes(x0 = Longitude, y0 = Latitude, r = .0005), color = "red") +
+         coord_sf(xlim = c(-85.57, -85.75), ylim = c(42.88, 43.03))
+         #coord_sf(xlim = c(-85.676, -85.685), ylim = c(42.96, 42.9665))
+```
+
+```{r}
+in_radius <- function(x, y) {
+  if_else(((x - rr_crossing_data_gr$Longitude) ^ 2 + (y - rr_crossing_data_gr$Latitude) ^ 2) <= .0005 ^ 2, 1, 0)
+}
+```
+
+```{r}
+in_radius(-85.63890,42.92721)
+```
+
+```{r}
+rr_crash %>% 
+  ggplot() +
+  geom_bar(mapping = aes(x = CRASHTYPE, color = CRASHTYPE))
+```
+
+```{r}
+crash_data %>% 
+  ggplot() +
+  geom_bar(mapping = aes(x = CRASHTYPE, color = CRASHTYPE))
+```
+
+The number of accidents in our radius gives us an idea of exposure
+
+```{r}
+rr_crossing_data_gr %>% 
+  filter(`Count Roadway Gate Arms` > 0)
 ```
 
