@@ -6,7 +6,12 @@ output: html_document
 ---
 
 ```{r}
-set.seed(158)
+library(tidyverse)
+```
+
+
+```{r}
+set.seed(160)
 ```
 
 I have 12 forks in my drawer.  2 are of type A and 10 are of type B.  In the past week I have selected a type A fork 3 out of 7 times for dinner.  I would like to know the probability of this occurring to judge if there is some sort of bias associated with my fork selection (I subconsciously prefer one fork type over the other, or the forks are not shaken up enough to allow for random selection).
@@ -63,6 +68,13 @@ tibble(prop = prop_fork_selection_sample_1000_weeks) %>%
   summarize(prop = n() / 1000)
 ```
 
-We see that the proportion of simulated samples where fork A was selected greater than (3/7) of the time is .078.
+We see that the proportion of simulated samples where fork A was selected greater than (3/7) of the time is .094.
 
 .078 is above an alpha of .05.  This leads me to assert that the outcome of my fork selection last week was highly unlikely, yet not statistically significant.  I would need to gather more data about my fork selection to determine if there is any bias in my selection of forks at dinner time.
+
+We can also calculate this probability using the pbinom() function:
+
+```{r}
+1 - pbinom(2,7,(2/12))
+```
+
