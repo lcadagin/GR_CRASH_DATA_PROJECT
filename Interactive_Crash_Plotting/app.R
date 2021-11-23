@@ -11,6 +11,11 @@ library(shinythemes)
 
 crash_data <- read_csv(here::here("data", "CGR_Crash_Data.csv"))
 
+#If WEATHER is marked as "Uncoded & Errors", change to "Unknown"
+
+crash_data <- crash_data %>% 
+    mutate(WEATHER = if_else(WEATHER == "Uncoded & Errors", "Unknown", WEATHER))
+
 #Configure features necessary for Grand Rapids map (using openstreetmap api)
 
 location_gr <- getbb("Grand Rapids") %>% 
@@ -108,41 +113,58 @@ ui <- fluidPage(
                         label = "Select Type of Weather: ",
                         choices = distinct(crash_data, WEATHER),
                         selected = c("Clear", "Cloudy", "Unknown", "Rain", "Snow", "Fog", "Sleet or Hail", "Uncoded & Errors", "Severe Crosswind", "Blowing Snow", "Smoke"),
-                        multiple = TRUE)
+                        multiple = TRUE),
+            
+            #Output showing how many Accidents are currently displayed
+            textOutput("n")
             
                     ),
         
         mainPanel(
             
-           #Location of Grand Rapids map output
-           plotOutput("gr_map", height = 700, width = 700),#, hover = "plot_hover"),
-           
-           #Placing Longitude and Latitude adjustments below GR map
-           fluidRow(
-               
-               column(6,
-                      sliderInput("longitude",
-                                  label = "Longitude Range: ",
-                                  min = -85.75,
-                                  max = -85.57,
-                                  value = c(-85.75,-85.57),
-                                  step = .01
-                      )
-               ),
-               
-               column(6,
-                      sliderInput("latitude",
-                                  label = "Latitude Range: ",
-                                  min = 42.88,
-                                  max = 43.03,
-                                  value = c(42.88,43.03),
-                                  step = .01
-                        )
-               )
+            #Creating two tabs for "Map" and "Data" associated with accidents filtered on
+            tabsetPanel(
+                type = "tabs",
+                
+                #Map tab
+                tabPanel("Map",
+                         
+                         #Location of Grand Rapids map output
+                         plotOutput("gr_map", height = 700, width = 700),#, hover = "plot_hover"),
+                         
+                         #Placing Longitude and Latitude adjustments below GR map
+                         fluidRow(
+                             
+                             #Includes Longitude Slide for filtering on longitude spread
+                             column(6,
+                                    sliderInput("longitude",
+                                                label = "Longitude Range: ",
+                                                min = -85.75,
+                                                max = -85.57,
+                                                value = c(-85.75,-85.57),
+                                                step = .01
+                                    )
+                             ),
+                             
+                             #Includes Latitude Slide for filtering on Latitude spread
+                             column(6,
+                                    sliderInput("latitude",
+                                                label = "Latitude Range: ",
+                                                min = 42.88,
+                                                max = 43.03,
+                                                value = c(42.88,43.03),
+                                                step = .01
+                                    )
+                             )
+                         )
+                ),
+                
+                #Data tab
+                tabPanel("Data",
+                         dataTableOutput("data")
+                         )
                     
            )
-           
-           #tableOutput("data")
         )
     )
 )
@@ -178,9 +200,18 @@ server <- function(input, output) {
             font("y", size = 16)
     })
     
-    #output$data <- renderTable({
-        #nearPoints(crash_data_filtered() %>% select(X, Y, CRASHDATE, HITANDRUN), input$plot_hover, xvar = "X", yvar = "Y")
-    #})
+    #Creating Data Table of filtered data, selecting on key variables
+    output$data <- renderDataTable({
+        crash_data_filtered() %>%
+            select(Longitude = X, Latitude = Y, CRASHDATE, HITANDRUN, TRAIN, SCHOOLBUS, HOUR, WEATHER, UD10NUM) %>%
+            arrange(CRASHDATE)
+        
+    })
+    
+    #Calculating number of accidents displayed in app
+    output$n <- renderText({
+        paste("Number of Accidents Shown: ", crash_data_filtered() %>% nrow())
+    })
 
 }
 
