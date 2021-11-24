@@ -5,10 +5,13 @@ date: "11/23/2021"
 output: html_document
 ---
 
-```{r}
+Load necessary packages:
+
+```{r message = FALSE}
 library(tidyverse)
 ```
 
+Set seed for simulation:
 
 ```{r}
 set.seed(160)

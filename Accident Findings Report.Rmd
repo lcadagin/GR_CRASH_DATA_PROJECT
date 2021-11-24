@@ -1,0 +1,151 @@
+---
+title: "Accident Findings Report"
+author: "Luke Cadagin"
+date: "11/24/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Report of Grand Rapids Accident Analysis
+
+Load necessary packages:
+
+```{r message = FALSE}
+library(tidyverse)
+library(sf)
+library(osmdata)
+library(ggpubr)
+```
+
+Specify size of all graphs in Knitted Documents:
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 16, fig.height = 8)
+```
+
+
+Upload Grand Rapids Crash Dataset (2008 - 2017):
+
+```{r message = FALSE}
+crash_data <- read_csv(here::here("data", "CGR_Crash_Data.csv"))
+head(crash_data)
+```
+
+
+Configure features necessary for Grand Rapids map (using openstreetmap api)
+
+```{r}
+location_gr <- getbb("Grand Rapids") %>% 
+    opq()
+
+major_roads_gr <- location_gr %>%
+    add_osm_feature(key = "highway", value = c("motorway", "trunk", "primary", "secondary", "tertiary")) %>% 
+    osmdata_sf()
+
+#minor_roads_gr <- location_gr %>%
+    #add_osm_feature(key = "highway", value = c("unclassified", "residential")) %>%
+    #osmdata_sf()
+
+water_gr <- location_gr %>% 
+    add_osm_feature(key = "waterway", value = c("river")) %>% 
+    osmdata_sf()
+
+boundary_gr <- location_gr %>% 
+    add_osm_feature(key = "boundary", value = "administrative") %>%
+    add_osm_feature(key = "name", value = "Grand Rapids") %>% 
+    osmdata_sf()
+```
+
+## Grand Rapids accidents associated with trains:
+
+I am interested in studying the impact gates at a railroad crossing have on the number of accidents associated with trains.
+
+Let's start by visualizing the number of Grand Rapids crashes associated with a train from 2008 - 2017.
+
+```{r}
+crash_data_train <- crash_data %>% 
+  filter(TRAIN == "Yes")
+
+crash_data_train %>% 
+  select(`Longitude` = X, `Latitude` = Y, CRASHDATE, TRAIN, `Principal Road` = PRNAME)
+```
+
+```{r warning = FALSE}
+  ggplot()+
+            geom_sf(data = major_roads_gr$osm_lines, size = .6, alpha = .6, color = 'black') +
+            #geom_sf(data = minor_roads_gr$osm_lines, size = .3, alpha = .3, color = 'black') +
+            geom_sf(data = water_gr$osm_lines, size = 1, alpha = .4, color = 'steelblue') +
+            geom_sf(data = boundary_gr$osm_lines, size = 1, alpha = .6, color = "orange") +
+            geom_point(data = crash_data_train, mapping = aes(x = X, y = Y), color = "blue") +
+            coord_sf(xlim = c(-85.57, -85.75), ylim = c(42.88, 43.03)) +
+            labs(title = "Grand Rapids City Limits", x = "Longitude", y = "Latitude") +
+            font("title", size = 20, color = "blue", face = "bold") +
+            font("x", size = 16) +
+            font("y", size = 16)
+```
+
+As you can see, from 2008 to 2017 there were only three accidents that occurred in Grand Rapids involving a train (In 17, 14, and 08).
+
+Although we have a very limited number of accidents directly involving a train, this is not a dead-end for our analysis.
+
+Next let's upload a a dataset from Transportation.gov (https://data.transportation.gov/Railroads/Crossing-Inventory-Data-Current/m2f8-22s6) that provides information about every railroad crossing in the USA:
+
+```{r message = FALSE}
+rr_crossing_data <- read_csv(here::here("data", "Crossing_Inventory_Data_-_Current.csv"))
+
+head(rr_crossing_data)
+```
+
+Now we filter this data for only railroad crossing within the Grand Rapids city limits:
+
+```{r}
+rr_crossing_data_gr <- rr_crossing_data %>% 
+  filter(`State Name` == "MICHIGAN", `City Name` == "GRAND RAPIDS", Latitude < 43)
+
+head(rr_crossing_data_gr)
+```
+
+```{r fig.width = 16, fig.height = 8, warning = FALSE}
+  ggplot()+
+            geom_sf(data = major_roads_gr$osm_lines, size = .6, alpha = .6, color = 'black') +
+            #geom_sf(data = minor_roads_gr$osm_lines, size = .3, alpha = .3, color = 'black') +
+            geom_sf(data = water_gr$osm_lines, size = 1, alpha = .4, color = 'steelblue') +
+            geom_sf(data = boundary_gr$osm_lines, size = 1, alpha = .6, color = "orange") +
+            geom_point(data = rr_crossing_data_gr, mapping = aes(x = Longitude, y = Latitude), color = "red") +
+            coord_sf(xlim = c(-85.57, -85.75), ylim = c(42.88, 43.03)) +
+            labs(title = "Grand Rapids City Limits", x = "Longitude", y = "Latitude") +
+            font("title", size = 20, color = "blue", face = "bold") +
+            font("x", size = 16) +
+            font("y", size = 16)
+```
+
+```{r}
+in_radius <- function(x, y) {
+  if_else(((x - rr_crossing_data_gr$Longitude) ^ 2 + (y - rr_crossing_data_gr$Latitude) ^ 2) <= .0005 ^ 2, 1, 0)
+}
+```
+
+```{r}
+near_rr_crash <- crash_data %>% 
+  rowwise() %>% 
+  filter(1 %in% in_radius(X,Y))
+
+head(near_rr_crash)
+```
+
+```{r fig.width = 16, fig.height = 8, warning = FALSE}
+  ggplot()+
+            geom_sf(data = major_roads_gr$osm_lines, size = .6, alpha = .6, color = 'black') +
+            #geom_sf(data = minor_roads_gr$osm_lines, size = .3, alpha = .3, color = 'black') +
+            geom_sf(data = water_gr$osm_lines, size = 1, alpha = .4, color = 'steelblue') +
+            geom_sf(data = boundary_gr$osm_lines, size = 1, alpha = .6, color = "orange") +
+            geom_point(data = near_rr_crash, mapping = aes(x = X, y = Y), color = "blue") +
+            geom_point(data = rr_crossing_data_gr, mapping = aes(x = Longitude, y = Latitude), color = "red") +
+            coord_sf(xlim = c(-85.57, -85.75), ylim = c(42.88, 43.03)) +
+            labs(title = "Grand Rapids City Limits", x = "Longitude", y = "Latitude") +
+            font("title", size = 20, color = "blue", face = "bold") +
+            font("x", size = 16) +
+            font("y", size = 16)
+```
+
