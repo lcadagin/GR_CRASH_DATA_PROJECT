@@ -9,7 +9,7 @@ library(shinythemes)
 
 #Load Grand Rapids Crash Data Set
 
-crash_data <- read_csv(here::here("data", "CGR_Crash_Data.csv"))
+crash_data <- read_csv(here::here("Interactive_Crash_Plotting", "data2", "CGR_Crash_Data.csv"))
 
 #If WEATHER is marked as "Uncoded & Errors", change to "Unknown"
 
