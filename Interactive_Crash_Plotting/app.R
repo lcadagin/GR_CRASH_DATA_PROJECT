@@ -192,7 +192,7 @@ server <- function(input, output) {
             #geom_sf(data = minor_roads_gr$osm_lines, size = .3, alpha = .3, color = 'black') +
             geom_sf(data = water_gr$osm_lines, size = 1, alpha = .4, color = 'steelblue') +
             geom_sf(data = boundary_gr$osm_lines, size = 1, alpha = .6, color = "orange") +
-            geom_point(data = crash_data_filtered(), mapping = aes(x = X, y = Y), color = "blue") +
+            geom_point(data = crash_data_filtered(), mapping = aes(x = X, y = Y), color = "blue", alpha = .4) +
             coord_sf(xlim = c(input$longitude[2], input$longitude[1]), ylim = c(input$latitude[1], input$latitude[2])) +
             labs(title = "Grand Rapids City Limits", x = "Longitude", y = "Latitude") +
             font("title", size = 20, color = "blue", face = "bold") +

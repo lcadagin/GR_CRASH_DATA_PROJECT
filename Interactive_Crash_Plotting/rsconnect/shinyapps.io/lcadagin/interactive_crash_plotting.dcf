@@ -5,7 +5,9 @@ account: lcadagin
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 5218396
-bundleId: 5302171
+bundleId: 5310638
 url: https://lcadagin.shinyapps.io/interactive_crash_plotting/
-when: 1638125043.23719
-lastSyncTime: 1638125043.2372
+when: 1638294056.40426
+lastSyncTime: 1638294056.40427
+asMultiple: FALSE
+asStatic: FALSE

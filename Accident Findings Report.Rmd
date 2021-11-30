@@ -16,6 +16,7 @@ library(tidyverse)
 library(sf)
 library(osmdata)
 library(ggpubr)
+library(ggforce)
 ```
 
 Specify size of all graphs in Knitted Documents:
@@ -29,9 +30,8 @@ Upload Grand Rapids Crash Dataset (2008 - 2017):
 
 ```{r message = FALSE}
 crash_data <- read_csv(here::here("data", "CGR_Crash_Data.csv"))
-head(crash_data)
+head(crash_data[1:6])
 ```
-
 
 Configure features necessary for Grand Rapids map (using openstreetmap api)
 
@@ -85,7 +85,7 @@ crash_data_train %>%
             font("y", size = 16)
 ```
 
-As you can see, from 2008 to 2017 there were only three accidents that occurred in Grand Rapids involving a train (In 17, 14, and 08).
+As you can see, from 2008 to 2017 there were only three accidents that occurred in Grand Rapids involving a train (In 2017, 2014, and 2008).
 
 Although we have a very limited number of accidents directly involving a train, this is not a dead-end for our analysis.
 
@@ -94,17 +94,29 @@ Next let's upload a a dataset from Transportation.gov (https://data.transportati
 ```{r message = FALSE}
 rr_crossing_data <- read_csv(here::here("data", "Crossing_Inventory_Data_-_Current.csv"))
 
-head(rr_crossing_data)
+head(rr_crossing_data[1:6])
 ```
 
-Now we filter this data for only railroad crossing within the Grand Rapids city limits:
+Now we filter this data for only railroad crossing within the Grand Rapids city limits (Note that there are three crossing located in the city center where Latitude = 42.96336 that I removed as it seems like the long/lang for these were placeholders):
 
 ```{r}
 rr_crossing_data_gr <- rr_crossing_data %>% 
-  filter(`State Name` == "MICHIGAN", `City Name` == "GRAND RAPIDS", Latitude < 43)
+  filter(`State Name` == "MICHIGAN", `City Name` == "GRAND RAPIDS", `Intersecting Roadway` == "Yes", Latitude < 43, Latitude != 42.96336)#, Latitude > 42.88, Longitude > -85.73, Longitude < -85.59, (Latitude > 42.92 | Longitude > -85.67))
 
-head(rr_crossing_data_gr)
+head(rr_crossing_data_gr[1:6])
 ```
+
+Let's Make Sure that there are no duplicates in the data:
+
+```{r}
+nrow(distinct(rr_crossing_data_gr, Latitude))
+```
+
+```{r}
+nrow(rr_crossing_data_gr)
+```
+
+We can visualize this data in red on our Grand Rapid's Map:
 
 ```{r fig.width = 16, fig.height = 8, warning = FALSE}
   ggplot()+
@@ -120,19 +132,27 @@ head(rr_crossing_data_gr)
             font("y", size = 16)
 ```
 
+We now would like to know how many crashes fall within a .0005 (longitudinal units) radius of each railroad crossing.
+
+To do so, we first write a function called in_radius() that detects if a longitude/latitude coordinate is located within a .0005 radius of all railroad crossings:
+
 ```{r}
-in_radius <- function(x, y) {
-  if_else(((x - rr_crossing_data_gr$Longitude) ^ 2 + (y - rr_crossing_data_gr$Latitude) ^ 2) <= .0005 ^ 2, 1, 0)
+in_radius <- function(x1, y1, x2, y2) {
+  if_else(((x1 - x2) ^ 2 + (y1 - y2) ^ 2) <= .0005 ^ 2, 1, 0)
 }
 ```
+
+Next we create a new accident subset named near_rr_crash that only contains crashes that occurred within a .0005 radius of a railroad crossing:
 
 ```{r}
 near_rr_crash <- crash_data %>% 
   rowwise() %>% 
-  filter(1 %in% in_radius(X,Y))
+  filter(1 %in% in_radius(X, Y, rr_crossing_data_gr$Longitude, rr_crossing_data_gr$Latitude))
 
-head(near_rr_crash)
+head(near_rr_crash[1:6])
 ```
+
+We plot this data on our grand rapids map to visualize the result:
 
 ```{r fig.width = 16, fig.height = 8, warning = FALSE}
   ggplot()+
@@ -142,10 +162,78 @@ head(near_rr_crash)
             geom_sf(data = boundary_gr$osm_lines, size = 1, alpha = .6, color = "orange") +
             geom_point(data = near_rr_crash, mapping = aes(x = X, y = Y), color = "blue") +
             geom_point(data = rr_crossing_data_gr, mapping = aes(x = Longitude, y = Latitude), color = "red") +
+            geom_circle(data = rr_crossing_data_gr, mapping = aes(x0 = Longitude, y0 = Latitude, r = .0005), color = "red") +
             coord_sf(xlim = c(-85.57, -85.75), ylim = c(42.88, 43.03)) +
             labs(title = "Grand Rapids City Limits", x = "Longitude", y = "Latitude") +
             font("title", size = 20, color = "blue", face = "bold") +
             font("x", size = 16) +
             font("y", size = 16)
+```
+
+Below is a zoomed-in portion of the map for better detail (located around the GVSU Pew Campus):
+
+```{r fig.width = 16, fig.height = 8, warning = FALSE}
+  ggplot()+
+            geom_sf(data = major_roads_gr$osm_lines, size = .6, alpha = .6, color = 'black') +
+            #geom_sf(data = minor_roads_gr$osm_lines, size = .3, alpha = .3, color = 'black') +
+            geom_sf(data = water_gr$osm_lines, size = 1, alpha = .4, color = 'steelblue') +
+            geom_sf(data = boundary_gr$osm_lines, size = 1, alpha = .6, color = "orange") +
+            geom_point(data = near_rr_crash, mapping = aes(x = X, y = Y), color = "blue") +
+            geom_point(data = rr_crossing_data_gr, mapping = aes(x = Longitude, y = Latitude), color = "red") +
+            geom_circle(data = rr_crossing_data_gr, mapping = aes(x0 = Longitude, y0 = Latitude, r = .0005), color = "red") +
+            coord_sf(xlim = c(-85.676, -85.685), ylim = c(42.96, 42.9665)) +
+            labs(title = "Grand Rapids City Limits", x = "Longitude", y = "Latitude") +
+            font("title", size = 20, color = "blue", face = "bold") +
+            font("x", size = 16) +
+            font("y", size = 16)
+```
+
+Now we create a tibble that sums the number of crashes that fall within a .0005 radius of each crossing along with the number of Gate arms at that crossing and the total number of trains that pass through during the day and night:
+
+```{r}
+crash_count <- rr_crossing_data_gr %>% 
+  rowwise() %>% 
+  mutate(Radius_Count = sum(in_radius(Longitude, Latitude, near_rr_crash$X, near_rr_crash$Y))) %>% 
+  select(Longitude, Latitude, `Count Roadway Gate Arms`, Radius_Count, `Total Daylight Thru Trains`, `Total Nighttime Thru Trains`) %>% 
+  arrange(desc(Radius_Count))
+
+head(crash_count,10)
+```
+
+We can use the number of accidents that occur within .0005 longitudinal units from a crossing (Radius_Count) to represent traffic exposure.  We are deriving latent information from this variable to determine if additional safety protocols should be put in place at a particular train crossing.
+
+The tibble shows us the crossings with the highest number of crashes that occurred near-by (Radius_Count).  We see that only 3 out of 10 of these crossing have gate arms.  
+
+
+Note, I used the command options(digits = 8) in order to view all of the longitude/latitude digits in the tibbles.
+
+```{r}
+test <- rr_crossing_data_gr %>% 
+  filter(Latitude == 42.984609)
+  #filter(Latitude == 42.989799)
+
+test
+
+```
+
+
+```{r}
+  ggplot()+
+            geom_sf(data = major_roads_gr$osm_lines, size = .6, alpha = .6, color = 'black') +
+            #geom_sf(data = minor_roads_gr$osm_lines, size = .3, alpha = .3, color = 'black') +
+            geom_sf(data = water_gr$osm_lines, size = 1, alpha = .4, color = 'steelblue') +
+            geom_sf(data = boundary_gr$osm_lines, size = 1, alpha = .6, color = "orange") +
+            #geom_point(data = near_rr_crash, mapping = aes(x = X, y = Y), color = "blue") +
+            geom_point(data = test, mapping = aes(x = Longitude, y = Latitude), color = "red") +
+            geom_circle(data = test, mapping = aes(x0 = Longitude, y0 = Latitude, r = .0005), color = "red") +
+            coord_sf(xlim = c(-85.57, -85.75), ylim = c(42.88, 43.03)) +
+            labs(title = "Grand Rapids City Limits", x = "Longitude", y = "Latitude") +
+            font("title", size = 20, color = "blue", face = "bold") +
+            font("x", size = 16) +
+            font("y", size = 16)
+```
+
+```{r}
+head(crash_data[1:6])
 ```
 

@@ -73,7 +73,7 @@ tibble(prop = prop_fork_selection_sample_1000_weeks) %>%
 
 We see that the proportion of simulated samples where fork A was selected greater than (3/7) of the time is .094.
 
-.078 is above an alpha of .05.  This leads me to assert that the outcome of my fork selection last week was highly unlikely, yet not statistically significant.  I would need to gather more data about my fork selection to determine if there is any bias in my selection of forks at dinner time.
+.094 is above an alpha of .05.  This leads me to assert that the outcome of my fork selection last week was highly unlikely, yet not statistically significant.  I would need to gather more data about my fork selection to determine if there is any bias in my selection of forks at dinner time.
 
 We can also calculate this probability using the pbinom() function:
 
