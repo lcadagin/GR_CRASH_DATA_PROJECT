@@ -9,7 +9,7 @@ output:
 
 # Report of Grand Rapids Accident Analysis
 
-Load necessary packages:
+Load necessary packages and set max numerical digits displayed in tibble to 8 (necessary for long/lat coordinates):
 
 ```{r message = FALSE}
 library(tidyverse)
@@ -17,6 +17,7 @@ library(sf)
 library(osmdata)
 library(ggpubr)
 library(ggforce)
+options(digits = 8)
 ```
 
 Specify size of all graphs in Knitted Documents:
@@ -91,7 +92,7 @@ Although we have a very limited number of accidents directly involving a train, 
 
 Next let's upload a a dataset from Transportation.gov (https://data.transportation.gov/Railroads/Crossing-Inventory-Data-Current/m2f8-22s6) that provides information about every railroad crossing in the USA:
 
-```{r message = FALSE}
+```{r message = FALSE, warning = FALSE}
 rr_crossing_data <- read_csv(here::here("data", "Crossing_Inventory_Data_-_Current.csv"))
 
 head(rr_crossing_data[1:6])
@@ -191,41 +192,34 @@ Below is a zoomed-in portion of the map for better detail (located around the GV
 Now we create a tibble that sums the number of crashes that fall within a .0005 radius of each crossing along with the number of Gate arms at that crossing and the total number of trains that pass through during the day and night:
 
 ```{r}
-crash_count <- rr_crossing_data_gr %>% 
+exposure <- rr_crossing_data_gr %>% 
   rowwise() %>% 
   mutate(Radius_Count = sum(in_radius(Longitude, Latitude, near_rr_crash$X, near_rr_crash$Y))) %>% 
-  select(Longitude, Latitude, `Count Roadway Gate Arms`, Radius_Count, `Total Daylight Thru Trains`, `Total Nighttime Thru Trains`) %>% 
-  arrange(desc(Radius_Count))
+  select(Longitude, Latitude, Street, "Gate_Arm_N" = `Count Roadway Gate Arms`, Radius_Count, `Total Daylight Thru Trains`, `Total Nighttime Thru Trains`) %>% 
+  arrange(desc(Radius_Count)) %>% 
+  ungroup()
 
-head(crash_count,10)
+head(exposure,10)
 ```
 
-We can use the number of accidents that occur within .0005 longitudinal units from a crossing (Radius_Count) to represent traffic exposure.  We are deriving latent information from this variable to determine if additional safety protocols should be put in place at a particular train crossing.
+We can use the number of accidents that occur within .0005 longitudinal units from a crossing (Radius_Count) to represent/correspond to traffic exposure.  We are deriving latent information from this variable to determine if additional safety protocols should be put in place at any particular train crossing.
 
-The tibble shows us the crossings with the highest number of crashes that occurred near-by (Radius_Count).  We see that only 3 out of 10 of these crossing have gate arms.  
+The tibble shows us the crossings with the highest number of crashes that occurred near-by (Radius_Count).  We see that out of the top 10 crossings with the highest traffic exposure, only 3 have gate arms.
 
-
-Note, I used the command options(digits = 8) in order to view all of the longitude/latitude digits in the tibbles.
+Let's take a look at these top 10 traffic exposure crossings on the Grand Rapids Map:
 
 ```{r}
-test <- rr_crossing_data_gr %>% 
-  filter(Latitude == 42.984609)
-  #filter(Latitude == 42.989799)
-
-test
-
+exposure_top_10 <- exposure %>% 
+  slice_head(n = 10)
 ```
 
-
-```{r}
+```{r warning = FALSE}
   ggplot()+
             geom_sf(data = major_roads_gr$osm_lines, size = .6, alpha = .6, color = 'black') +
             #geom_sf(data = minor_roads_gr$osm_lines, size = .3, alpha = .3, color = 'black') +
             geom_sf(data = water_gr$osm_lines, size = 1, alpha = .4, color = 'steelblue') +
             geom_sf(data = boundary_gr$osm_lines, size = 1, alpha = .6, color = "orange") +
-            #geom_point(data = near_rr_crash, mapping = aes(x = X, y = Y), color = "blue") +
-            geom_point(data = test, mapping = aes(x = Longitude, y = Latitude), color = "red") +
-            geom_circle(data = test, mapping = aes(x0 = Longitude, y0 = Latitude, r = .0005), color = "red") +
+            geom_point(data = exposure_top_10, mapping = aes(x = Longitude, y = Latitude), color = "red") +
             coord_sf(xlim = c(-85.57, -85.75), ylim = c(42.88, 43.03)) +
             labs(title = "Grand Rapids City Limits", x = "Longitude", y = "Latitude") +
             font("title", size = 20, color = "blue", face = "bold") +
@@ -233,7 +227,74 @@ test
             font("y", size = 16)
 ```
 
-```{r}
-head(crash_data[1:6])
+We can see these crossings are scattered around the city.  Notice that two of these crossings are located on the GVSU Pew Campus:
+
+```{r warning = FALSE, message =FALSE}
+  ggplot()+
+            geom_sf(data = major_roads_gr$osm_lines, size = .6, alpha = .6, color = 'black') +
+            #geom_sf(data = minor_roads_gr$osm_lines, size = .3, alpha = .3, color = 'black') +
+            geom_sf(data = water_gr$osm_lines, size = 1, alpha = .4, color = 'steelblue') +
+            geom_sf(data = boundary_gr$osm_lines, size = 1, alpha = .6, color = "orange") +
+            geom_point(data = exposure_top_10, mapping = aes(x = Longitude, y = Latitude), color = "red") +
+            #geom_circle(data = exposure_top_10, mapping = aes(x0 = Longitude, y0 = Latitude, r = .0005), color = "red") +
+            coord_sf(xlim = c(-85.676, -85.685), ylim = c(42.96, 42.9665)) +
+            labs(title = "Grand Rapids City Limits", x = "Longitude", y = "Latitude") +
+            geom_text(data = exposure_top_10, mapping = aes(Longitude, Latitude, label = Street), nudge_y = -.0004, color = "red") +
+            font("title", size = 20, color = "blue", face = "bold") +
+            font("x", size = 16) +
+            font("y", size = 16)
 ```
+
+We can see that the crossing at "LAKE MICHIGAN DRIVE NW" (-85.681461,42966083) does have gate arms while the crossing at "FULTON STREET" (-85.681619,42.963392	) does not have gate arms.  Also note that the total Daylight (1) and Nighttime (2) trains for these crossings are the same while the Radius_Count for the "FULTON STREET" crossing (45) is greater than the "LAKE MICHIGAN DRIVE NW" crossing (40):
+
+```{r}
+exposure_top_10 %>% 
+  filter(Street %in% c("LAKE MICHIGAN DRIVE NW", "FULTON STREET"))
+```
+
+I am not sure what metrics are used by the city of Grand Rapids to determine if a railroad crossing arm is necessary, but there appears to be a degree of inconsistency.
+
+Note that among all 74 railroad crossings in Grand Rapids, 26 have at least one gate arm.
+
+```{r}
+exposure %>% 
+  filter(Gate_Arm_N > 0) %>% 
+  nrow()
+```
+
+Of these 26 crossings, 22 have at least one Daylight Train OR one Nighttime train pass through.  This is about 85% (22/26):
+
+```{r}
+exposure %>% 
+  filter(Gate_Arm_N > 0, (`Total Daylight Thru Trains` > 0 | `Total Nighttime Thru Trains` > 0)) %>% 
+  nrow()
+```
+
+With this in mind, let us take a second look at the top 10 traffic exposure crossings:
+
+```{r}
+exposure_top_10
+```
+
+As we noted earlier, 7 of these crossings do not have gate arms:
+
+```{r}
+exposure_top_10 %>% 
+  filter(Gate_Arm_N == 0)
+```
+
+Of these 7, 5 have at least one daylight OR nighttime train go through each day:
+
+```{r}
+exposure_top_10 %>% 
+  filter(Gate_Arm_N == 0, (`Total Daylight Thru Trains` > 0 | `Total Nighttime Thru Trains` > 0))
+```
+
+I would recommend that the city of Grand Rapids takes a second look at these crossings to determine if a gate arm or additional traffic precautions are necessary.
+
+## Exploratory Application
+
+To supplement this analysis, I have put together a Shiny Application for the city of Grand Rapids to explore the crash dataset on their own.  This application can be accessed using the address below:
+
+https://lcadagin.shinyapps.io/interactive_crash_plotting/
 
