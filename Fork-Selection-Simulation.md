@@ -3,6 +3,8 @@ Fork Selection Simulation
 Luke Cadagin
 11/23/2021
 
+## Set Up
+
 Load necessary packages:
 
 ``` r
@@ -14,6 +16,8 @@ Set seed for simulation:
 ``` r
 set.seed(160)
 ```
+
+## Simulation
 
 I have 12 forks in my drawer. 2 are of type A and 10 are of type B. In
 the past week I have selected a type A fork 3 out of 7 times for dinner.
@@ -109,6 +113,8 @@ head(unlist(prop_fork_selection_sample_1000_weeks))
 
     ## [1] 0.4285714 0.0000000 0.2857143 0.2857143 0.1428571 0.2857143
 
+## Results
+
 Finally, we calculate the proportion of simulated samples where fork A
 was selected greater than (3/7) of the time:
 
@@ -131,6 +137,8 @@ of my fork selection last week was highly unlikely, yet not
 statistically significant. I would need to gather more data about my
 fork selection to determine if there is any bias in my selection of
 forks at dinner time.
+
+## Verification
 
 We can also calculate this probability using the pbinom() function:
 
