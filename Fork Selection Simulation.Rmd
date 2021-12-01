@@ -2,18 +2,21 @@
 title: "Fork Selection Simulation"
 author: "Luke Cadagin"
 date: "11/23/2021"
-output: html_document
+output:
+  github_document: default
+  html_document: default
+  pdf_document: default
 ---
 
 Load necessary packages:
 
-```{r message = FALSE}
+```{r Load Packages message = FALSE}
 library(tidyverse)
 ```
 
 Set seed for simulation:
 
-```{r}
+```{r Set Seed}
 set.seed(160)
 ```
 
@@ -21,7 +24,7 @@ I have 12 forks in my drawer.  2 are of type A and 10 are of type B.  In the pas
 
 First we simulate a single week (7 days) of selecting a fork at dinner.  We will use a binomial distribution to model this data (1 = Select Fork Type A, 0 = Select Fork Type B):
 
-```{r}
+```{r Run Single Week Simulation}
 days_week <- 7
 
 fork_selection_sample_week <- rbinom(n = days_week, size = 1, prob = (2/12))
@@ -29,43 +32,43 @@ fork_selection_sample_week <- rbinom(n = days_week, size = 1, prob = (2/12))
 
 Below is the result of our simulation:
 
-```{r}
+```{r View Results of Single Week Simulation}
 fork_selection_sample_week
 ```
 
 Now we generate 1000 of these week simulations using the map() function:
 
-```{r}
+```{r Run 1000 One Week Simulations}
 fork_selection_sample_1000_weeks <- map(1:1000, ~rbinom(n = days_week, size = 1, prob = (2/12)))
 ```
 
 Below are the top 6 results of our simulation:
 
-```{r}
+```{r View Results of 1000 One Week Simulations}
 head(fork_selection_sample_1000_weeks)
 ```
 
 Now we calculate the proportion of Type A forks selected in each sample using the map() function again:
 
-```{r}
+```{r Calculate Proportion of Fork Type A in Each Week}
 prop_fork_selection_sample_1000_weeks <- map(fork_selection_sample_1000_weeks, ~sum(.) / length(.))
 ```
 
 Below are the top 6 proportions of our simulation:
 
-```{r}
+```{r View Results of Fork Type A Proportions}
 head(prop_fork_selection_sample_1000_weeks)
 ```
 
 Next we unlist this data:
 
-```{r}
+```{r Unlist Data}
 head(unlist(prop_fork_selection_sample_1000_weeks))
 ```
 
 Finally, we calculate the proportion of simulated samples where fork A was selected greater than (3/7) of the time:
 
-```{r}
+```{r Calculate Proportion of Proportions}
 tibble(prop = prop_fork_selection_sample_1000_weeks) %>% 
   filter(prop >= (3/7)) %>% 
   summarize(prop = n() / 1000)
@@ -77,7 +80,7 @@ We see that the proportion of simulated samples where fork A was selected greate
 
 We can also calculate this probability using the pbinom() function:
 
-```{r}
+```{r Verify Results}
 1 - pbinom(2,7,(2/12))
 ```
 
