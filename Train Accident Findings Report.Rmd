@@ -1,13 +1,16 @@
 ---
-title: "Accident Findings Report"
+title: "Train Accident Findings Report"
 author: "Luke Cadagin"
 date: "11/24/2021"
 output:
-  pdf_document: default
+  github_document: default
   html_document: default
+  pdf_document: default
 ---
 
-# Report of Grand Rapids Accident Analysis
+# Report of Grand Rapids Train Accident Analysis
+
+## Set Up
 
 Load necessary packages and set max numerical digits displayed in tibble to 8 (necessary for long/lat coordinates):
 
@@ -58,7 +61,7 @@ boundary_gr <- location_gr %>%
     osmdata_sf()
 ```
 
-## Grand Rapids accidents associated with trains:
+## Initial Exploration of Direct Train Accidents
 
 I am interested in studying the impact gates at a railroad crossing have on the number of accidents associated with trains.
 
@@ -87,6 +90,8 @@ crash_data_train %>%
 ```
 
 As you can see, from 2008 to 2017 there were only three accidents that occurred in Grand Rapids involving a train (In 2017, 2014, and 2008).
+
+## Pulling In Grand Rapids Train Crossings:
 
 Although we have a very limited number of accidents directly involving a train, this is not a dead-end for our analysis.
 
@@ -132,6 +137,8 @@ We can visualize this data in red on our Grand Rapid's Map:
             font("x", size = 16) +
             font("y", size = 16)
 ```
+
+## Exploring Accidents in the Vacinity of Railroad Crossings:
 
 We now would like to know how many crashes fall within a .0005 (longitudinal units) radius of each railroad crossing.
 
@@ -189,13 +196,15 @@ Below is a zoomed-in portion of the map for better detail (located around the GV
             font("y", size = 16)
 ```
 
+## Summarizing and Analyzing Results:
+
 Now we create a tibble that sums the number of crashes that fall within a .0005 radius of each crossing along with the number of Gate arms at that crossing and the total number of trains that pass through during the day and night:
 
 ```{r}
 exposure <- rr_crossing_data_gr %>% 
   rowwise() %>% 
   mutate(Radius_Count = sum(in_radius(Longitude, Latitude, near_rr_crash$X, near_rr_crash$Y))) %>% 
-  select(Longitude, Latitude, Street, "Gate_Arm_N" = `Count Roadway Gate Arms`, Radius_Count, `Total Daylight Thru Trains`, `Total Nighttime Thru Trains`) %>% 
+  select(Longitude, Latitude, Street, "Gate_Arm_N" = `Count Roadway Gate Arms`, Radius_Count, "Day_Trains_N" = `Total Daylight Thru Trains`, "Night_Trains_N" = `Total Nighttime Thru Trains`) %>% 
   arrange(desc(Radius_Count)) %>% 
   ungroup()
 
@@ -266,7 +275,7 @@ Of these 26 crossings, 22 have at least one Daylight Train OR one Nighttime trai
 
 ```{r}
 exposure %>% 
-  filter(Gate_Arm_N > 0, (`Total Daylight Thru Trains` > 0 | `Total Nighttime Thru Trains` > 0)) %>% 
+  filter(Gate_Arm_N > 0, (Day_Trains_N > 0 | Night_Trains_N > 0)) %>% 
   nrow()
 ```
 
@@ -287,12 +296,12 @@ Of these 7, 5 have at least one daylight OR nighttime train go through each day:
 
 ```{r}
 exposure_top_10 %>% 
-  filter(Gate_Arm_N == 0, (`Total Daylight Thru Trains` > 0 | `Total Nighttime Thru Trains` > 0))
+  filter(Gate_Arm_N == 0, (Day_Trains_N > 0 | Night_Trains_N > 0))
 ```
 
 I would recommend that the city of Grand Rapids takes a second look at these crossings to determine if a gate arm or additional traffic precautions are necessary.
 
-## Exploratory Application
+# Exploratory Application
 
 To supplement this analysis, I have put together a Shiny Application for the city of Grand Rapids to explore the crash dataset on their own.  This application can be accessed using the address below:
 
