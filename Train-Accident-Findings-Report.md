@@ -372,7 +372,6 @@ two of these crossings are located on the GVSU Pew Campus:
             geom_sf(data = water_gr$osm_lines, size = 1, alpha = .4, color = 'steelblue') +
             geom_sf(data = boundary_gr$osm_lines, size = 1, alpha = .6, color = "orange") +
             geom_point(data = exposure_top_10, mapping = aes(x = Longitude, y = Latitude), color = "red") +
-            #geom_circle(data = exposure_top_10, mapping = aes(x0 = Longitude, y0 = Latitude, r = .0005), color = "red") +
             coord_sf(xlim = c(-85.676, -85.685), ylim = c(42.96, 42.9665)) +
             labs(title = "Grand Valley Pew Campus", x = "Longitude", y = "Latitude") +
             geom_text(data = exposure_top_10, mapping = aes(Longitude, Latitude, label = Street), nudge_y = -.0002, color = "red") +
